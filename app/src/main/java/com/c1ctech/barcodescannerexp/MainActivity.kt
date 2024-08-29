@@ -1,39 +1,55 @@
 package com.c1ctech.barcodescannerexp
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_main.*
 import android.os.Bundle
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.barcode.Barcode
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
-import kotlin.IllegalStateException
-
-import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.firebase.FirebaseApp;
+import com.c1ctech.barcodescannerexp.databinding.ActivityMainBinding
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var firestore: FirebaseFirestore
+    private var isProcessingScan = false
 
     private var previewView: PreviewView? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private var cameraSelector: CameraSelector? = null
-    private var lensFacing = CameraSelector.LENS_FACING_BACK
+    private var lensFacing = CameraSelector.LENS_FACING_FRONT
     private var previewUseCase: Preview? = null
     private var analysisUseCase: ImageAnalysis? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         setupCamera()
+        FirebaseApp.initializeApp(this)
+        firestore = FirebaseFirestore.getInstance()
+
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            Log.e("Firebase", "Firebase is not initialized!")
+        } else {
+            Log.d("Firebase", "Firebase is initialized successfully!")
+        }
+
     }
 
     private fun setupCamera() {
@@ -139,29 +155,11 @@ class MainActivity : AppCompatActivity() {
         barcodeScanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 barcodes.forEach { barcode ->
-                    val bounds = barcode.boundingBox
-                    val corners = barcode.cornerPoints
-
                     val rawValue = barcode.rawValue
+                    binding.tvScannedData.text = rawValue
 
-                    tvScannedData.text = barcode.rawValue
-
-                    val valueType = barcode.valueType
-                    // See API reference for complete list of supported types
-                    when (valueType) {
-                        Barcode.TYPE_WIFI -> {
-                            val ssid = barcode.wifi!!.ssid
-                            val password = barcode.wifi!!.password
-                            val type = barcode.wifi!!.encryptionType
-                            tvScannedData.text =
-                                "ssid: " + ssid + "\npassword: " + password + "\ntype: " + type
-                        }
-                        Barcode.TYPE_URL -> {
-                            val title = barcode.url!!.title
-                            val url = barcode.url!!.url
-
-                            tvScannedData.text = "Title: " + title + "\nURL: " + url
-                        }
+                    if (rawValue != null) {
+                        handleScannedQRCode(rawValue)
                     }
                 }
             }
@@ -169,11 +167,7 @@ class MainActivity : AppCompatActivity() {
                 Log.e(TAG, it.message ?: it.toString())
             }
             .addOnCompleteListener {
-                // When the image is from CameraX analysis use case, must call image.close() on received
-                // images when finished using them. Otherwise, new images may not be received or the camera
-                // may stall.
                 imageProxy.close()
-
             }
     }
 
@@ -205,5 +199,39 @@ class MainActivity : AppCompatActivity() {
 
         private const val PERMISSION_CAMERA_REQUEST = 1
     }
+    private fun handleScannedQRCode(qrCodeValue: String) {
+        val collectionRef = firestore.collection("qrCodes")
+
+        collectionRef.whereEqualTo("id", qrCodeValue).get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    val document = querySnapshot.documents.first()
+                    val email = document.getString("email") ?: "No email"
+                    Log.d(TAG, "Document found: email = $email")
+                    navigateToUserPage(email)
+                } else {
+                    Log.d(TAG, "No such document with ID: $qrCodeValue")
+                    Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { exception ->
+                Log.d(TAG, "Failed to get document: ", exception)
+                Toast.makeText(this, "Failed to retrieve user", Toast.LENGTH_SHORT).show()
+            }
+            .addOnCompleteListener {
+                isProcessingScan = false // Reset the flag after processing is complete
+            }
+    }
+
+    private fun navigateToUserPage(email: String) {
+        Log.d(TAG, "Proceed to intent");
+
+        val intent = Intent(this, UserPageActivity::class.java).apply {
+            putExtra("USER_EMAIL", email)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+    }
+
 
 }
