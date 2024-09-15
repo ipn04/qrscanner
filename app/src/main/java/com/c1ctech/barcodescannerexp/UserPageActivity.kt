@@ -1,16 +1,68 @@
 package com.c1ctech.barcodescannerexp
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Date
 
-class  UserPageActivity : AppCompatActivity() {
+class UserPageActivity : AppCompatActivity() {
+    private lateinit var firestore: FirebaseFirestore
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_page)
 
-        val userEmail = intent.getStringExtra("USER_EMAIL")
+        firestore = FirebaseFirestore.getInstance()
+        auth = FirebaseAuth.getInstance()
+
+        // Retrieve data from Intent
+        val userId = intent.getStringExtra("USER_ID") ?: "No id provided"
+        val userPoints = intent.getIntExtra("USER_POINTS", 0)
+        val userLargeCount = intent.getIntExtra("USER_LARGE_BOTTLE_COUNT", 0)
+        val userSmallCount = intent.getIntExtra("USER_SMALL_BOTTLE_COUNT", 0)
+
+        // Find TextViews and set the received data
         val emailTextView: TextView = findViewById(R.id.emailTextView)
-        emailTextView.text = userEmail ?: "No email provided"
+        val pointsTextView: TextView = findViewById(R.id.textView)
+        val bottleCountTextView: TextView = findViewById(R.id.textView2)
+        val smallBottleCountTextView: TextView = findViewById(R.id.textView3) // Add a new TextView for small bottles
+
+        emailTextView.text = userId
+        pointsTextView.text = userPoints.toString()
+        bottleCountTextView.text = userLargeCount.toString()
+        smallBottleCountTextView.text = userSmallCount.toString() // Set smallBottleCount to the UI
+
+        // Get current user UID
+        val currentUser = auth.currentUser
+
+        // Push data to Firestore dynamically
+        pushDataToFirestore(userId, userPoints, userLargeCount, userSmallCount)
+    }
+
+    private fun pushDataToFirestore(userId: String, points: Int, largeBottleCount: Int, smallBottleCount: Int) {
+        val totalBottles = largeBottleCount + smallBottleCount
+
+        val data = mapOf(
+            "action" to "points added",
+            "bigBottles" to largeBottleCount,
+            "points" to points,
+            "smallBottles" to smallBottleCount,
+            "timestamp" to Timestamp(Date()),
+            "totalBottles" to totalBottles,
+            "userId" to userId
+        )
+
+        firestore.collection("pointsAddedHistory").add(data)
+            .addOnSuccessListener {
+                Log.d("UserPageActivity", "DocumentSnapshot successfully written!")
+            }
+            .addOnFailureListener { e ->
+                Log.w("UserPageActivity", "Error writing document", e)
+            }
     }
 }

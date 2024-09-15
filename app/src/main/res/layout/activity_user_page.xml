@@ -5,22 +5,49 @@
     android:padding="16dp"
     android:background="#FFFFFF"> <!-- Set background color to white -->
 
+
+    <!-- Email TextView at the top -->
     <TextView
         android:id="@+id/emailTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="User Email"
         android:textColor="#000000"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"/>
 
+    <!-- Points TextView below the Email TextView -->
     <TextView
+        android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:text="User Email"
+        android:text="Points"
         android:textColor="#000000"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        android:layout_below="@id/emailTextView"
+        android:layout_marginTop="16dp"/>
 
+    <!-- Large Bottle Count TextView below the Points TextView -->
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Large Bottles"
+        android:textColor="#000000"
+        android:textSize="18sp"
+        android:layout_below="@id/textView"
+        android:layout_marginTop="16dp"/>
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Small Bottles"
+        android:textColor="#000000"
+        android:textSize="18sp"
+        android:layout_below="@id/textView2"
+        android:layout_marginTop="16dp"/>
 
 
     <!-- Other UI elements -->
