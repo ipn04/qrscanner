@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1025186803211",
+    "project_id": "muzonproperproject",
+    "storage_bucket": "muzonproperproject.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1025186803211:android:e30f34392c91de164c610e",
+        "android_client_info": {
+          "package_name": "com.c1ctech.barcodescannerexp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCSlqiUdlFsuIRf1olsvVelMfVs-pBYa0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

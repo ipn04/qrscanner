@@ -1,13 +1,16 @@
 package com.c1ctech.barcodescannerexp
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Date
+import com.google.firebase.firestore.FieldValue
 
 class UserPageActivity : AppCompatActivity() {
     private lateinit var firestore: FirebaseFirestore
@@ -35,13 +38,26 @@ class UserPageActivity : AppCompatActivity() {
         emailTextView.text = userId
         pointsTextView.text = userPoints.toString()
         bottleCountTextView.text = userLargeCount.toString()
-        smallBottleCountTextView.text = userSmallCount.toString() // Set smallBottleCount to the UI
+        smallBottleCountTextView.text = userSmallCount.toString()
+        // Set smallBottleCount to the UI
 
         // Get current user UID
         val currentUser = auth.currentUser
 
+
         // Push data to Firestore dynamically
         pushDataToFirestore(userId, userPoints, userLargeCount, userSmallCount)
+
+        updateUserPoints(userId, userPoints)
+
+        val backButton = findViewById<Button>(R.id.back)
+
+        // Set up an OnClickListener for the button
+        backButton.setOnClickListener {
+            val intent = Intent(this, HomePage::class.java)
+
+            startActivity(intent)
+        }
     }
 
     private fun pushDataToFirestore(userId: String, points: Int, largeBottleCount: Int, smallBottleCount: Int) {
@@ -63,6 +79,24 @@ class UserPageActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 Log.w("UserPageActivity", "Error writing document", e)
+            }
+    }
+    private fun updateUserPoints(userId: String, points: Int) {
+        val userPointsRef = firestore.collection("userPoints").document(userId)
+
+        // Increment the points field by the value of pointsToAdd
+        userPointsRef.update(
+            mapOf(
+                "user_points_id" to userId,
+                "points" to FieldValue.increment(points.toLong()),
+                "updatedAt" to Timestamp(Date())
+            )
+        )
+            .addOnSuccessListener {
+                Log.d("UserPageActivity", "User points successfully updated!")
+            }
+            .addOnFailureListener { e ->
+                Log.w("UserPageActivity", "Error updating user points", e)
             }
     }
 }

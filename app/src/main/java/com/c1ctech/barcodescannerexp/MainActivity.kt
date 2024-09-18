@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity() {
         FirebaseApp.initializeApp(this)
         firestore = FirebaseFirestore.getInstance()
 
+
+
         if (FirebaseApp.getApps(this).isEmpty()) {
             Log.e("Firebase", "Firebase is not initialized!")
         } else {
@@ -641,49 +643,32 @@ class MainActivity : AppCompatActivity() {
                         var isEspCommunicationSuccessful = false
 
                         try {
-                            val esp8266Url = "http://192.168.68.122/update"
+                            val esp8266Url = "http://192.168.68.122/action"
                             Log.d(TAG, "Connecting to ESP8266 at: $esp8266Url")
                             val url = URL(esp8266Url)
                             with(url.openConnection() as HttpURLConnection) {
+                                connectTimeout = 10000 // 5 seconds timeout
+                                readTimeout = 10000
                                 requestMethod = "POST"
                                 doOutput = true
                                 setRequestProperty("Content-Type", "application/json")
 
-                                // Send JSON data
-                                val postData = """{"userId":"$userId"}"""
+                                val postData = """{"command":"RESET"}""" // Use "RESET" instead of "reset"
                                 Log.d(TAG, "Sending data: $postData")
 
                                 outputStream.use {
                                     it.write(postData.toByteArray())
+                                    it.flush() // Ensure all data is sent
                                 }
                                 Log.d(TAG, "Output Stream written successfully")
-
                                 val responseCode = responseCode
-                                Log.d(TAG, "Response Code: $responseCode")
                                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                                    // Read the response
-                                    val response = inputStream.bufferedReader().use { it.readText() }
-                                    Log.d(TAG, "Full Response from ESP8266: $response")
-
-                                    // Parse JSON response
-                                    try {
-                                        val jsonResponse = JSONObject(response)
-                                        val points = jsonResponse.optInt("points", 0)
-                                        val largeBottleCount = jsonResponse.optInt("largeBottleCount", 0)
-                                        val smallBottleCount = jsonResponse.optInt("smallBottleCount", 0)
-                                        Log.d(TAG, "Points: $points, Large Bottles: $largeBottleCount, Small Bottles: $smallBottleCount")
-
-                                        isEspCommunicationSuccessful = true
-
-                                        // Navigate to User Page with the received data
-                                        navigateToUserPage(userId, points, largeBottleCount, smallBottleCount)
-                                    } catch (e: JSONException) {
-                                        Log.e(TAG, "JSON Parsing error: ${e.message}")
-                                    }
+                                    Log.d(TAG, "Server response: ${inputStream.bufferedReader().use { it.readText() }}")
+                                    isEspCommunicationSuccessful = true // Set to true when communication is successful
                                 } else {
-                                    Log.e(TAG, "Failed to send QR code to ESP8266, Response Code: $responseCode")
-                                    Log.e(TAG, "Response Message: ${responseMessage}")
+                                    Log.e(TAG, "Server returned HTTP error code: $responseCode")
                                 }
+                                navigateToUserPage(userId)
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "Exception in sending QR code to ESP8266: ${e.message}")
@@ -691,6 +676,7 @@ class MainActivity : AppCompatActivity() {
                         } finally {
                             if (!isEspCommunicationSuccessful) {
                                 Log.e(TAG, "ESP communication failed.")
+
                             }
                             isProcessingScan = false
                         }
@@ -708,14 +694,21 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun navigateToUserPage(userId: String, points: Int, largeBottleCount: Int, smallBottleCount: Int) {
+    private fun navigateToUserPage(userId: String) {
         Log.d(TAG, "Proceed to intent")
+
+
+        // Retrieve the text values from the Intent
+        val smallBottlesText = intent.getStringExtra("smallBottles")?.toIntOrNull() ?: 0
+        val bigBottlesText = intent.getStringExtra("bigBottles")?.toIntOrNull() ?: 0
+        val totalPointsText = intent.getStringExtra("totalPoints")?.toIntOrNull() ?: 0
+
 
         val intent = Intent(this, UserPageActivity::class.java).apply {
             putExtra("USER_ID", userId)
-            putExtra("USER_POINTS", points)
-            putExtra("USER_LARGE_BOTTLE_COUNT", largeBottleCount)
-            putExtra("USER_SMALL_BOTTLE_COUNT", smallBottleCount)
+            putExtra("USER_POINTS", totalPointsText)
+            putExtra("USER_LARGE_BOTTLE_COUNT", bigBottlesText)
+            putExtra("USER_SMALL_BOTTLE_COUNT", smallBottlesText)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
