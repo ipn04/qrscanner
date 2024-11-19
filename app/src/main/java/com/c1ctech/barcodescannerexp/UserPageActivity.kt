@@ -5,9 +5,12 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Date
 import com.google.firebase.firestore.FieldValue
@@ -15,16 +18,20 @@ import com.google.firebase.firestore.FieldValue
 class UserPageActivity : AppCompatActivity() {
     private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
+    private lateinit var database: DatabaseReference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_page)
+        database = FirebaseDatabase.getInstance().getReference("App/Touchscreen/Commands/")
 
         firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
 
         // Retrieve data from Intent
         val userId = intent.getStringExtra("USER_ID") ?: "No id provided"
+        val fullName = intent.getStringExtra("FULL_NAME") ?: "No fullname provided"
+
         val userPoints = intent.getIntExtra("USER_POINTS", 0)
         val userLargeCount = intent.getIntExtra("USER_LARGE_BOTTLE_COUNT", 0)
         val userSmallCount = intent.getIntExtra("USER_SMALL_BOTTLE_COUNT", 0)
@@ -35,14 +42,12 @@ class UserPageActivity : AppCompatActivity() {
         val bottleCountTextView: TextView = findViewById(R.id.textView2)
         val smallBottleCountTextView: TextView = findViewById(R.id.textView3) // Add a new TextView for small bottles
 
-        emailTextView.text = userId
+        emailTextView.text = fullName
         pointsTextView.text = userPoints.toString()
         bottleCountTextView.text = userLargeCount.toString()
         smallBottleCountTextView.text = userSmallCount.toString()
         // Set smallBottleCount to the UI
 
-        // Get current user UID
-        val currentUser = auth.currentUser
 
 
         // Push data to Firestore dynamically
@@ -55,9 +60,16 @@ class UserPageActivity : AppCompatActivity() {
         // Set up an OnClickListener for the button
         backButton.setOnClickListener {
             val intent = Intent(this, HomePage::class.java)
+            addResetCommand()
 
-            startActivity(intent)
+            finish()
         }
+    }
+
+    private fun addResetCommand() {
+        // Set the command directly without generating a unique ID
+        database.child("command").setValue("RESET")
+        // Write the command directly to the specified path
     }
 
     private fun pushDataToFirestore(userId: String, points: Int, largeBottleCount: Int, smallBottleCount: Int) {
